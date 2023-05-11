@@ -14,7 +14,7 @@ spec:
         app: hello-world
     spec:
       containers:
-      - image: :zxasqwcdev/cicd-kaniko:5
+      - image: zxasqwcdev/cicd-kaniko:5
         name: hello-world
         ports:
         - containerPort: 8080
