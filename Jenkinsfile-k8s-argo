@@ -1,0 +1,63 @@
+pipeline {
+  agent {
+    kubernetes {
+      yamlFile 'pod.yaml'
+    }
+  }
+  environment {
+    gitUser = 'jhkim-09'
+    gitEmail = 'juhyokim@nobreak.co.kr'
+    gitRepo = 'test'
+    gitURL = "https://github.com/${gitUser}/${gitRepo}.git"
+    dockerName = "kimjuhyo"
+    dockerRepo = "cicd-kaniko-argo"
+    imageName = "${dockerName}/${dockerRepo}"
+    projectName = "kube_pipeline"
+  }
+  stages {
+    stage('Checkout') {
+      steps {
+        container('maven') {
+          git branch: 'main', url: 'https://github.com/jhkim-09/test.git'
+        }
+      }
+    }
+    stage('Build') {
+      steps {
+        container('maven') {
+          sh 'mvn -DskipTests=true clean package'
+        }
+      }
+    }
+    stage('Test') {
+      steps {
+        container('maven') {
+          sh 'mvn test'
+        }
+      }
+    }
+    stage('Tag Docker Image') {
+      steps {
+        container('kaniko') {
+          sh 'executor --context=dir:///home/jenkins/agent/workspace/$projectName/ --destination=$imageName:$BUILD_NUMBER --destination=$imageName:latest'
+        }
+      }
+    }
+    stage('Update') {
+      steps {
+        container('git') {
+          git branch: 'main', credentialsId: 'github-credential', url: "${gitURL}"
+          sh "git config --global --add safe.directory ${workspace}"
+          sh "git config --global user.name ${gitUser}"
+          sh "git config --global user.email ${gitEmail}"
+          sh 'sed -i "s/image:.*/image: ${dockerName}\\/${dockerRepo}:${BUILD_NUMBER}/g" deployment.yaml'
+          sh 'git add deployment.yaml'
+          sh 'git commit -m "New Build ${BUILD_NUMBER}"'
+          withCredentials([gitUsernamePassword(credentialsId: 'github-credential', gitToolName: 'Default')]) {
+            sh 'git push --set-upstream origin main'
+          }
+        }
+      }
+    }
+  }
+}
