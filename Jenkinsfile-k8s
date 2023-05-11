@@ -39,7 +39,7 @@ spec:
     stage('Checkout') {
       steps {
         container('maven') {
-          git branch: 'main', url: 'https://github.com/jhkim-09/test.git'
+          git branch: 'main', url: 'https://github.com/zxasqwcdevf/kanicotest.git'
         }
       }
     }
